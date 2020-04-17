@@ -4,16 +4,16 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setup(
-    name="aws2-wrap",
-    version="1.0.2",
-    description="A wrapper for executing a command with AWS CLI v2 and SSO",
+    name="aws-sso-cred-restore",
+    version="1.0.0",
+    description="A wrapper for executing a command with AWS CLI v2 and SSO, inspired from aws2-wrap",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/linaro-its/aws2-wrap",
-    author="Philip Colmer",
-    author_email="it-support@linaro.org",
+    url="https://github.com/claytonsilva/aws-sso-cred-restore",
+    author="Clayton Silva",
+    author_email="clayton.silva@pagar.me",
     classifiers=[
-        'Development Status :: 4 - Beta',
+        'Development Status :: 3 - Alpha',
         'Intended Audience :: Developers',
         'Programming Language :: Python :: 3',
         'Environment :: Console',
@@ -23,12 +23,12 @@ setup(
     license="GNU General Public License v3 (GPLv3)",
     keywords="aws profile sso assume role",
     packages=[
-        "aws2wrap"
+        "awsssocredrestore"
     ],
     install_requires=[],
     entry_points={
         'console_scripts': [
-            'aws2-wrap = aws2wrap:main',
+            'aws-sso-cred-restore = awsssocredrestore:main',
         ]
     },
     python_requires=">=3.6",

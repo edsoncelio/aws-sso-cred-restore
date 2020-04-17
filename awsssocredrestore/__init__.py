@@ -1,15 +1,14 @@
 #!/usr/bin/python3
 #
-# aws2-wrap --profile <profile> [--export | --exec <run command>]
+# aws-sso-cred-restore --profile <profile> [--export]
 #
-# A simple script that exports the accessKeyId, secretAccessKey and sessionToken for the specified
-# AWS SSO credentials, or it can run a subprocess with those credentials.
+# This script restore credential file using AWS SSO command from aws cli version 2
 #
 # This script is intended to plug a (hopefully temporary) gap in the official aws2 tool. As such, it
 # makes certain assumptions about the cache file and does not rely on boto3 because the aws2 tool
 # packages a dev version.
 #
-# Copyright (c) 2020 Linaro Ltd
+# Copyright (c) 2020 Clayton Silva | Pagar.me , inspired in source from Linaro Ltd
 
 
 import argparse
@@ -27,8 +26,7 @@ def process_arguments():
     parser = argparse.ArgumentParser(allow_abbrev=False)
     group = parser.add_mutually_exclusive_group()
     group.add_argument("--export", action="store_true")
-    group.add_argument("--exec", action="store")
-    parser.add_argument("--profile", action="store", required=True)
+    parser.add_argument("--profile", action="store", required=False)
     args = parser.parse_args()
     return args
 
@@ -38,6 +36,19 @@ def retrieve_attribute(profile, tag):
     if tag not in profile:
         sys.exit("'%s' not in '%s' profile" % (tag, profile))
     return profile[tag]
+
+
+def set_attribute(config, profile_name, tag, value):
+    """ Safely find and set the desired attribute from the AWS profile credentials. """
+    # Set Values in file in defined section
+    config.set(profile_name, tag, "\"%s\"" % value)
+
+
+def retrieve_all_profiles():
+    config_path = os.path.abspath(os.path.expanduser("~/.aws/config"))
+    config = configparser.ConfigParser()
+    config.read(config_path)
+    return map(lambda item: item.replace('profile ', ''), config.sections())
 
 
 def retrieve_profile(profile_name):
@@ -57,6 +68,22 @@ def retrieve_profile(profile_name):
     return sso_start_url, sso_region, sso_account_id, sso_role_name
 
 
+def refresh_profile_credentials(profile_name, access_key, secret_access_key, session_token):
+    """ Find the AWS Config credentials matching the specified profile name. """
+    config_path = os.path.abspath(os.path.expanduser("~/.aws/credentials"))
+    config = configparser.ConfigParser()
+    config.read(config_path)
+    # create section in creds if not exist
+    if profile_name not in config.sections():
+        config.add_section(profile_name)
+    set_attribute(config, profile_name, "aws_access_key_id", access_key)
+    set_attribute(config, profile_name,
+                  "aws_secret_access_key", secret_access_key)
+    set_attribute(config, profile_name, "aws_session_token", session_token)
+    with open(config_path, 'w') as configfile:
+        config.write(configfile)
+
+
 def retrieve_token_from_file(filename, sso_start_url, sso_region):
     """ Check specified file and, if valid, return the access token. """
     with open(filename, "r") as json_file:
@@ -68,7 +95,8 @@ def retrieve_token_from_file(filename, sso_start_url, sso_region):
         return None
     expires_at = blob["expiresAt"]
     # This will be a string like "2020-03-26T13:28:35UTC"
-    expire_datetime = datetime.strptime(expires_at.replace("UTC", "+0000"), "%Y-%m-%dT%H:%M:%S%z")
+    expire_datetime = datetime.strptime(
+        expires_at.replace("UTC", "+0000"), "%Y-%m-%dT%H:%M:%S%z")
     if expire_datetime < datetime.now(timezone.utc):
         # This has expired
         return None
@@ -108,7 +136,8 @@ def get_role_credentials(profile_name, sso_role_name, sso_account_id, sso_access
     )
     if result.returncode != 0:
         print(result.stderr.decode(), file=sys.stderr)
-        sys.exit("Please login with 'aws sso login --profile=%s'" % profile_name)
+        sys.exit("Please login with 'aws sso login --profile=%s'" %
+                 profile_name)
 
     output = result.stdout
     blob = json.loads(output)
@@ -118,26 +147,37 @@ def get_role_credentials(profile_name, sso_role_name, sso_account_id, sso_access
     return access_key, secret_access_key, session_token
 
 
-def main():
-    """ Main! """
-    args = process_arguments()
-    sso_start_url, sso_region, sso_account_id, sso_role_name = retrieve_profile(args.profile)
-    sso_access_token = retrieve_token(sso_start_url, sso_region, args.profile)
+def process_profile(profile, export):
+    sso_start_url, sso_region, sso_account_id, sso_role_name = retrieve_profile(
+        profile)
+    sso_access_token = retrieve_token(sso_start_url, sso_region, profile)
     access_key, secret_access_key, session_token = get_role_credentials(
-        args.profile,
+        profile,
         sso_role_name,
         sso_account_id,
         sso_access_token,
         sso_region)
-    if args.export:
+
+    print("parsing creds file for profile %s" % profile)
+    refresh_profile_credentials(
+        profile, access_key, secret_access_key, session_token)
+    if export:
         print("export AWS_ACCESS_KEY_ID=\"%s\"" % access_key)
-        print("export AWS_SECRET_ACCESS_KEY=\"%s\"" % secret_access_key)
+        print("export AWS_SECRET_ACCESS_KEY=\"%s\"" %
+              secret_access_key)
         print("export AWS_SESSION_TOKEN=\"%s\"" % session_token)
-    elif args.exec is not None:
-        os.environ["AWS_ACCESS_KEY_ID"] = access_key
-        os.environ["AWS_SECRET_ACCESS_KEY"] = secret_access_key
-        os.environ["AWS_SESSION_TOKEN"] = session_token
-        os.system(args.exec)
+
+
+def main():
+    """ Main! """
+    args = process_arguments()
+    all_profiles = retrieve_all_profiles()
+    if not args.profile:
+        for profile in all_profiles:
+            process_profile(profile, args.export)
+    else:
+        for profile in filter(lambda k: args.profile in k, all_profiles):
+            process_profile(profile, args.export)
 
 
 if __name__ == '__main__':

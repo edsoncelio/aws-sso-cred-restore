@@ -1,23 +1,44 @@
-[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=linaro-its_aws2-wrap&metric=alert_status)](https://sonarcloud.io/dashboard?id=linaro-its_aws2-wrap)
+<!-- [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=linaro-its_aws2-wrap&metric=alert_status)](https://sonarcloud.io/dashboard?id=linaro-its_aws2-wrap) -->
 
-# aws2-wrap
-This is a simple script to facilitate exporting the current AWS SSO credentials or runing a command with them. Please note that it is called `aws2-wrap` to show that it works with AWS CLI v2, even though the CLI tool is no longer called `aws2`.
+# aws-sso-cred-restore
+This is script is inspired from `aws2-wrap` and solve problem with old sdk's  like aws-sdk-go and turn safe our
+work with tools like terraform.
+
+## the problem
+
+Work with terraform is more safe if we use only profile configuration and  work with `workspaces` feature.
+
+```hcl
+provider "aws" {
+	 profile = "${terraform.env}"
+	 region  = "${var.region}"
+}
+```
+
+But aws sso cli command cannot configure credentials file, and aws-sdk-go cannot work with new model of profile config.
+
+Using environment variables, the configuration overwrite profile option on provider block on terraform, and this is *dangerous*.
+
+This wrapper solve `temporary` (hello aws and hashicorp, solve this plis!!) this problem.
+
 
 ## Install using `pip`
 
-https://pypi.org/project/aws2-wrap
+https://pypi.org/project/aws-sso-cred-restore
 
-`pip install aws2-wrap==1.0.2`
+`pip install aws-sso-cred-restore==<VERSION>`
 
 ## Run a command using AWS SSO credentials
 
-`aws2-wrap --profile <awsprofilename> --exec "<command>"`
+`aws-sso-cred-restore --profile <awsprofilename-or-prefix>`
 
-Note that you must enclose the command to be executed within double-quotes in order to ensure that any parameters are passed to that sub-command and not to `aws2-wrap`.
+or run to all profiles in your config
 
-For example:
+`aws-sso-cred-restore`
 
-`aws2-wrap --profile MySSOProfile --exec "terraform"`
+This command will get credentials using active aws sso access key section file
+and restore in `~/.aws/credentials`
+
 
 ## Export the credentials
 
@@ -25,8 +46,5 @@ There may be circumstances when it is easier/better to set the appropriate envir
 
 Since the script cannot directly set the environment variables in the calling shell process, it is necessary to use the following syntax:
 
-`eval "$(aws2-wrap --profile <awsprofilename> --export)"`
+`eval "$(aws-sso-cred-restore --profile <awsprofilename-or-prefix> --export)"`
 
-For example:
-
-`eval "$(aws2-wrap --profile MySSOProfile --export)"`
