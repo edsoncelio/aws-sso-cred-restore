@@ -41,7 +41,7 @@ def retrieve_attribute(profile, tag):
 def set_attribute(config, profile_name, tag, value):
     """ Safely find and set the desired attribute from the AWS profile credentials. """
     # Set Values in file in defined section
-    config.set(profile_name, tag, "\"%s\"" % value)
+    config.set(profile_name, tag, "%s" % value)
 
 
 def retrieve_all_profiles():
