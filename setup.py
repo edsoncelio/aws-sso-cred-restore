@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name="aws-sso-cred-restore",
-    version="1.0.1",
+    version="1.1.0",
     description="A wrapper for executing a command with AWS CLI v2 and SSO, inspired from aws2-wrap",
     long_description=long_description,
     long_description_content_type="text/markdown",
