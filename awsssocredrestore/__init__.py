@@ -34,7 +34,7 @@ def process_arguments():
 def retrieve_attribute(profile, tag):
     """ Safely find and return the desired attribute from the AWS Config profile. """
     if tag not in profile:
-        sys.exit("'%s' not in '%s' profile" % (tag, profile))
+        return None
     return profile[tag]
 
 
@@ -65,6 +65,11 @@ def retrieve_profile(profile_name):
     sso_region = retrieve_attribute(profile, "sso_region")
     sso_account_id = retrieve_attribute(profile, "sso_account_id")
     sso_role_name = retrieve_attribute(profile, "sso_role_name")
+
+    # If we didn't get all the parameters we need, skip this profile
+    if (sso_start_url is None) or (sso_region is None) or (sso_account_id is None) or (sso_role_name is None): 
+        return None, None, None, None
+    
     return sso_start_url, sso_region, sso_account_id, sso_role_name
 
 
@@ -151,6 +156,11 @@ def get_role_credentials(profile_name, sso_role_name, sso_account_id, sso_access
 def process_profile(profile, export):
     sso_start_url, sso_region, sso_account_id, sso_role_name = retrieve_profile(
         profile)
+
+    # If we got None from the result, bail out - it's not a profile we can process.
+    if sso_start_url is None: 
+        return
+
     sso_access_token = retrieve_token(sso_start_url, sso_region, profile)
     access_key, secret_access_key, session_token = get_role_credentials(
         profile,
