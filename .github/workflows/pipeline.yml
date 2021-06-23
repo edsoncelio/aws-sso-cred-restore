@@ -38,7 +38,7 @@ jobs:
           file: ./Dockerfile
           builder: ${{ steps.buildx.outputs.name }}
           push: true
-          tags: ${{ env.USERNAME }}/${{ env.REPOSITORY }}:${{ steps.get_tag.outputs.VERSION }}, $USERNAME/$REPOSITORY:latest
+          tags: ${{ env.USERNAME }}/${{ env.REPOSITORY }}:${{ steps.get_tag.outputs.VERSION }},  ${{ env.USERNAME }}/$${{ env.REPOSITORY }}:latest
 
       - name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}
