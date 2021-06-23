@@ -33,7 +33,7 @@ jobs:
           file: ./Dockerfile
           builder: ${{ steps.buildx.outputs.name }}
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.REPOSITORY }:$IMAGE_TAG
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.REPOSITORY }}:$IMAGE_TAG
 
       - name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}
